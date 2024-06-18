@@ -32,5 +32,5 @@ The findings provide valuable insights for teams and analysts aiming to enhance 
     ```r
     install.packages(c("DBI", "RSQLite", "ggplot2", "dplyr"))
     ```
-3. Open and run the `NBA_Analysis.Rmd` file in RStudio or another R environment.
-
+3. Open and run the [`NBA_Analysis.Rmd`](NBA_Analysis.Rmd) file in RStudio or another R environment to reproduce the analysis.
+4. You can also view the analysis results directly in the [PDF report](NBA_Analysis.pdf) for a detailed summary and visualization of the findings.
