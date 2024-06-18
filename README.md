@@ -25,7 +25,7 @@ The findings provide valuable insights for teams and analysts aiming to enhance 
 ## How to Use
 1. Clone the repository:
     ```sh
-    git clone https://github.com/your-username/NBA-Game-Analysis-Factors-Influencing-Victory.git
+    git clone https://github.com/colinh-9/NBA-Game-Analysis-Factors-Influencing-Victory.git
     cd NBA-Game-Analysis-Factors-Influencing-Victory
     ```
 2. Ensure you have the necessary libraries installed:
