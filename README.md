@@ -30,7 +30,7 @@ The findings provide valuable insights for teams and analysts aiming to enhance 
     ```
 2. Ensure you have the necessary libraries installed:
     ```r
-    install.packages(c("DBI", "RSQLite", "ggplot2", "dplyr"))
+    install.packages(c("DBI", "RSQLite", "ggplot2", "dplyr", "ggcorrplot", "psych"))
     ```
 3. Open and run the [`Log_Models_NBA_Analysis.Rmd`](Log_Models_NBA_Analysis.Rmd) and/or [`NBA_Analysis.Rmd`](NBA_Analysis.Rmd) file in RStudio or another R environment to reproduce the analysis.
 4. You can also view the analysis results directly in the [Logistic Models/Heat Map PDF Report](Log_Models_NBA_Analysis.pdf) and/or [Correlation Analysis PDF Report](NBA_Analysis.pdf) for a detailed summary and visualization of the findings.
