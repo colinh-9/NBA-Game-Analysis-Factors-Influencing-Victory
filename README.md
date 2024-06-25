@@ -1,7 +1,7 @@
 # NBA-Game-Analysis-Factors-Influencing-Victory
 
 ## Overview
-This project investigates key factors contributing to winning in the NBA using data from the nba.sqlite database. Various statistical techniques, including correlation analysis and visualization, are employed to understand the impact of different performance metrics on game outcomes.
+This project investigates key factors contributing to winning in the NBA using data from the nba.sqlite database. Various statistical techniques, including correlation analysis, logistical modeling and visualization, are employed to understand the impact of different performance metrics on game outcomes. There are two separate .rmd files and PDF files in this repository: (1) The [`Log_Models_NBA_Analysis.Rmd`](Log_Models_NBA_Analysis.Rmd) and [Logistic Models/Heat Map PDF Report](NBA_Analysis.pdf), which provide context to why I wanted to look into the [`NBA_Analysis.Rmd`](NBA_Analysis.Rmd) and [Correlation Analysis PDF Report](NBA_Analysis.pdf).
 
 ## Data
 The data used in this analysis is sourced from the nba.sqlite database, containing detailed game statistics over multiple decades. Download the dataset from this link: https://www.kaggle.com/datasets/wyattowalsh/basketball/data
@@ -32,5 +32,5 @@ The findings provide valuable insights for teams and analysts aiming to enhance 
     ```r
     install.packages(c("DBI", "RSQLite", "ggplot2", "dplyr"))
     ```
-3. Open and run the [`NBA_Analysis.Rmd`](NBA_Analysis.Rmd) file in RStudio or another R environment to reproduce the analysis.
-4. You can also view the analysis results directly in the [PDF report](NBA_Analysis.pdf) for a detailed summary and visualization of the findings.
+3. Open and run the [`Log_Models_NBA_Analysis.Rmd`](Log_Models_NBA_Analysis.Rmd) and/or [`NBA_Analysis.Rmd`](NBA_Analysis.Rmd) file in RStudio or another R environment to reproduce the analysis.
+4. You can also view the analysis results directly in the [Logistic Models/Heat Map PDF Report](Log_Models_NBA_Analysis.pdf) and/or [Correlation Analysis PDF Report](NBA_Analysis.pdf) for a detailed summary and visualization of the findings.
