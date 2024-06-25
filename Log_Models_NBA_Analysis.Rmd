@@ -1,0 +1,249 @@
+---
+title: "Logistic Regression Models Analyzing Likelihood of Winning"
+output:
+  pdf_document:
+    latex_engine: xelatex
+  word_document: default
+  html_document:
+    df_print: paged
+date: "2024-05-15"
+---
+
+**Abstract**
+
+This analysis investigates the key factors influencing the likelihood of winning NBA games, with a specific focus on metrics such as home court advantage, rebounding, three-pointers made and attempted, turnovers, and shooting percentages. 
+
+Utilizing logistic regression models and a correlation matrix heat map, the study reveals significant predictors of game outcomes. Field goal percentage and three-point made advantages are the strongest predictors of margin of victory, underscoring the importance of shooting efficiency. Additionally, turnover and rebound advantages positively impact winning chances. 
+
+Despite a slight negative correlation between three-point attempts and winning probability, the study highlights a notable rise in three-point attempts over the years, prompting a deeper exploration of evolving NBA strategies. This comprehensive analysis aims to provide valuable insights into the effectiveness of contemporary basketball strategies, informed by historical data and statistical trends.
+
+**Limitations**
+
+It is important to acknowledge that the dataset has inherent limitations, including incomplete data for certain years and potential biases in data collection methods. Additionally, changes in game rules, such as the introduction of the three-point line in 1979, could influence the trends observed in the data.
+
+```{r}
+library(DBI)
+library(RSQLite)
+library(ggplot2)
+library(ggcorrplot)
+library(dplyr)
+
+
+db_path <- "/Users/colinhadden/Downloads/archive/nba.sqlite"
+
+con <- dbConnect(RSQLite::SQLite(), dbname = db_path)
+
+tables <- dbListTables(con)
+
+gameTable <- dbGetQuery(con, "SELECT * FROM game")
+```
+This setup allows for subsequent data analysis and visualization tasks on the game table data from the NBA SQLite database.
+
+**Home Court Advantage**
+```{r}
+home_court_adv_query <- dbGetQuery(con, "
+SELECT
+    wl_home AS win_loss,
+    CASE
+        WHEN wl_home = 'W' THEN 1
+        ELSE 0
+    END AS win_loss_numeric,
+    1 AS is_home
+FROM game
+UNION ALL
+SELECT
+    wl_away AS win_loss,
+    CASE
+        WHEN wl_away = 'W' THEN 1
+        ELSE 0
+    END AS win_loss_numeric,
+    0 AS is_home
+FROM game
+")
+
+home_court_adv_model <- glm(win_loss_numeric ~ is_home, data = home_court_adv_query, family = binomial())
+
+summary(home_court_adv_model)
+```
+
+The logistic regression model indicates that playing at home significantly increases the likelihood of winning, with the is_home coefficient (0.968410) being highly significant (p < 2e-16). The positive estimate suggests that home teams have a strong advantage, as the odds of winning are substantially higher when playing at home compared to playing away.
+
+**Rebounding**
+```{r}
+rebounding_adv_query <- dbGetQuery(con, "SELECT game_id, 
+                     wl_home, 
+                     reb_home, 
+                     reb_away,
+                     (reb_home - reb_away) AS rebound_adv,
+                     CASE
+                         WHEN wl_home = 'W' THEN 1
+                         ELSE 0
+                     END AS win_loss_numeric
+                     FROM game
+                     WHERE reb_home IS NOT NULL and reb_away IS NOT NULL")
+
+rebounding_adv_model <- glm(win_loss_numeric ~ rebound_adv, data = rebounding_adv_query, family = binomial())
+
+summary(rebounding_adv_model)
+```
+
+The logistic regression model shows that rebound advantage significantly increases the likelihood of winning, with the `rebound_adv` coefficient (0.088731) being highly significant (p < 2e-16). The positive estimate indicates that as the rebound advantage increases, the odds of winning also increase, underscoring the importance of rebounding in determining game outcomes.
+
+**Three-pointers made**
+```{r}
+fg3m_adv_query <- dbGetQuery(con, "SELECT game_id, 
+                     wl_home, 
+                     fg3m_home, 
+                     fg3m_away,
+                     (fg3m_home - fg3m_away) AS fg3m_adv,
+                     CASE
+                         WHEN wl_home = 'W' THEN 1
+                         ELSE 0
+                     END AS win_loss_numeric
+                     FROM game
+                     WHERE fg3m_home IS NOT NULL AND fg3m_away IS NOT NULL")
+
+fg3m_adv_model <- glm(win_loss_numeric ~ fg3m_adv, data = fg3m_adv_query, family = binomial())
+
+summary(fg3m_adv_model)
+```
+
+The logistic regression model indicates that the number of three-pointers made advantage `fg3m_adv` significantly increases the likelihood of winning, with the `fg3m_adv` coefficient (0.135572) being highly significant (p < 2e-16). The positive estimate suggests that as the three-point made advantage increases, the odds of winning also increase, highlighting the critical role of three-point shooting in determining game outcomes.
+
+**Three-pointers attempted**
+```{r}
+library(DBI)
+fg3a_adv_query <- dbGetQuery(con, "
+SELECT game_id,
+       wl_home,
+       fg3a_home,
+       fg3a_away,
+       (fg3a_home - fg3a_away) AS fg3a_adv,
+       CASE
+           WHEN wl_home = 'W' THEN 1
+           ELSE 0
+       END AS win_loss_numeric
+FROM game
+WHERE fg3a_home IS NOT NULL AND fg3a_away IS NOT NULL
+")
+
+fg3a_adv_model <- glm(win_loss_numeric ~ fg3a_adv, data = fg3a_adv_query, family = binomial())
+
+summary(fg3a_adv_model)
+```
+
+The logistic regression model shows that the number of three-pointers attempted advantage `fg3a_adv` has a small but significant negative effect on the likelihood of winning, with the `fg3a_adv` coefficient (-0.010892) being highly significant (p < 2e-16). This negative estimate suggests that attempting more three-pointers than the opponent is slightly associated with a lower probability of winning, indicating that simply attempting more three-pointers without making them may not be an effective strategy for securing victories.
+
+**Data Extraction and Cleaning**
+```{r}
+library(ggcorrplot)
+library(psych)
+
+full_data_query <- "
+SELECT
+    game_id,
+    reb_home - reb_away AS rebound_adv,
+    tov_away - tov_home AS tov_adv,
+    fg3a_home - fg3a_away AS fg3a_adv,
+    fg3m_home - fg3m_away AS fg3m_adv,
+    fg_pct_home - fg_pct_away AS fg_pct_adv,
+    fg3_pct_home - fg3_pct_away AS fg3_pct_adv,
+    ft_pct_home - ft_pct_away AS ft_pct_adv,
+    pts_home - pts_away AS margin_of_victory
+FROM
+    game
+WHERE
+    reb_home IS NOT NULL AND reb_away IS NOT NULL
+    AND tov_home IS NOT NULL AND tov_away IS NOT NULL
+    AND fg3a_home IS NOT NULL AND fg3a_away IS NOT NULL
+    AND fg3m_home IS NOT NULL AND fg3m_away IS NOT NULL
+    AND fg_pct_home IS NOT NULL AND fg_pct_away IS NOT NULL
+    AND fg3_pct_home IS NOT NULL AND fg3_pct_away IS NOT NULL
+    AND ft_pct_home IS NOT NULL AND ft_pct_away IS NOT NULL
+    AND pts_home IS NOT NULL AND pts_away IS NOT NULL
+"
+
+full_data <- dbGetQuery(con, full_data_query)
+
+# Remove duplicates
+full_data <- full_data %>% group_by(game_id) %>% slice(1) %>% ungroup()
+```
+
+**Calculating Descriptive Stats**
+```{r}
+descriptive_stats <- describe(full_data[, c("margin_of_victory", "rebound_adv", "tov_adv", "fg3a_adv", "fg3m_adv", "fg_pct_adv", "fg3_pct_adv", "ft_pct_adv")], skew = FALSE)
+print(descriptive_stats)
+```
+The descriptive statistics reveal that while the mean advantages in various metrics are generally small, the standard deviations and ranges indicate significant variability across games. This suggests that while some metrics like rebounding and turnovers show consistent advantages for the home team, others like shooting percentages have more balanced distributions, emphasizing the unpredictable nature of basketball game outcomes. 
+
+These insights set the stage for further analysis using correlation and regression models to understand the impact of these metrics on the margin of victory.
+
+**Regression Model Summary**
+```{r}
+# Fit a linear regression model
+nba_model <- lm(margin_of_victory ~ rebound_adv + tov_adv + fg3a_adv + fg3m_adv + fg_pct_adv + fg3_pct_adv + ft_pct_adv, data = full_data)
+
+model_summary <- summary(nba_model)
+
+print(model_summary)
+```
+
+The linear regression model reveals significant factors influencing the margin of victory in basketball games. 
+
+Key predictors include rebound advantage (Estimate: 0.596602), turnover advantage (Estimate: 1.167749), and three-point made advantage (Estimate: 0.952126), all positively affecting the margin. Conversely, three-point attempts advantage has a slight negative effect (Estimate: -0.050470). Field goal percentage advantage (Estimate: 110.100663) is the strongest predictor, emphasizing shooting efficiency's critical role. Free throw percentage advantage (Estimate: 14.946370) also significantly impacts the margin. 
+
+The model's high R-squared value (0.9152) indicates these variables explain most of the variance in game outcomes, highlighting their importance in determining victory.
+
+**Correlation Heat Map**
+```{r}
+cormatrix <- cor(full_data[, c("margin_of_victory", "rebound_adv", "tov_adv", "fg3a_adv",
+                               "fg3m_adv", "fg_pct_adv", "fg3_pct_adv", "ft_pct_adv")], use = "complete.obs")
+
+ggcorrplot(cormatrix, 
+           method = "circle", 
+           type = "lower", 
+           lab = TRUE, 
+           title = "Correlation Matrix Heatmap")
+```
+
+The correlation matrix heat map reveals that field goal percentage advantage (0.76) and three-point made advantage (0.71) are the strongest predictors of margin of victory, highlighting the importance of shooting efficiency. Turnover advantage (0.39) and rebound advantage (0.44) also positively impact the margin, indicating that controlling turnovers and rebounds is crucial. 
+
+Three-point attempt advantage shows a slight negative correlation (-0.05), suggesting that simply attempting more three-pointers is ineffective. But looking at the modern landscape of the NBA, how could this be the case? 
+
+**Average Three-Point Attempts Per Game by Year**
+```{r}
+fg3a_per_game_query <- "
+SELECT 
+    strftime('%Y', game_date) AS year,
+    AVG(fg3a_home + fg3a_away) AS fg3a_per_game
+FROM 
+    game
+WHERE 
+    fg3a_home IS NOT NULL 
+    AND fg3a_away IS NOT NULL
+    AND strftime('%Y', game_date) > '1979'
+GROUP BY 
+    year
+"
+
+fg3a_per_game <- dbGetQuery(con, fg3a_per_game_query)
+
+fg3a_per_game$year <- as.numeric(fg3a_per_game$year)
+
+# Plot the data
+ggplot(fg3a_per_game, aes(x = year, y = fg3a_per_game)) +
+    geom_line() +                  
+    geom_point() +
+    geom_smooth(method = "lm", se = FALSE, color = "blue") +
+    labs(title = "Average Three-Point Attempts Per Game by Year",
+         x = "Year",
+         y = "Average Three-Point Attempts Per Game") +
+    theme_minimal()                
+
+```
+
+As the plot vividly illustrates, the NBA has experienced a dramatic rise in the average number of three-point attempts per game over the years.
+
+This apparent contradiction invites a deeper reflection on the evolving strategies of the game. Why has there been such a pronounced shift towards more three-point attempts despite their questionable direct impact on winning? This question underscores the necessity for a comprehensive analysis of all relevant statistics over the years. 
+
+By examining factors such as field goal percentage, turnover advantage, and rebounding, we can better understand the complex interplay of these elements and how they have influenced the game's outcomes in the context of an ever-evolving strategic landscape. This holistic analysis can provide valuable insights into the effectiveness of contemporary basketball strategies and inform future approaches to the game.
